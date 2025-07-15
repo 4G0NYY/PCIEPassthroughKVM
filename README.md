@@ -178,5 +178,3 @@ sudo virsh autostart vmname
 ✅ **GPU Passthrough** (RTX 3070 Ti fully utilized).  
 ✅ **Nested Virtualization** (for WSL2/Hyper-V inside VM).  
 ✅ **Undetectable VM** (games/DRM work).  
-
-Let me know if you hit any snags—I’ll help debug! 🚀
