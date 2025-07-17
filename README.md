@@ -236,7 +236,111 @@ sudo virsh autostart vmname
 
 ---
 
+## Looking-Glass
+Fantastic progress! 🎉 Since your GPU is now correctly bound to `vfio-pci`, you're ready for **Looking Glass**—and it's **not hard at all** to set up! Here's a streamlined guide:
+
+---
+
+### **Looking Glass Setup Guide (Arch Linux + Windows VM)**
+#### **What You’ll Need:**
+- A **Windows 10/11 VM** with GPU passthrough (almost done!).
+- **Shared memory** (IVSHMEM) between host and VM.
+- **Looking Glass host/client components**.
+
+---
+
+### **Step 1: Install Looking Glass on Host (Arch Linux)**
+```bash
+yay -S looking-glass
+```
+*(This installs the client and host modules.)*
+
+---
+
+### **Step 2: Allocate Shared Memory**
+1. **Calculate required RAM** (e.g., 32MB for 1080p, 64MB for 4K):
+   ```bash
+   sudo touch /dev/shm/looking-glass
+   sudo chown $USER:kvm /dev/shm/looking-glass
+   sudo chmod 660 /dev/shm/looking-glass
+   ```
+2. **Add IVSHMEM device to your VM** (via `virt-manager` or XML):
+   ```xml
+   <shmem name='looking-glass'>
+     <model type='ivshmem-plain'/>
+     <size unit='M'>32</size>  <!-- Adjust size here -->
+   </shmem>
+   ```
+   *(Add this under `<devices>` in your VM’s XML.)*
+
+---
+
+### **Step 3: Install Looking Glass on Windows VM**
+1. **Inside the Windows VM**:
+   - Download the latest **Looking Glass Windows driver**:  
+     [https://looking-glass.io/downloads](https://looking-glass.io/downloads)
+   - Install it (accept driver warnings).
+2. **Start the Looking Glass service**:
+   - Run `services.msc` → Start **"Looking Glass (Win32)"**.
+
+---
+
+### **Step 4: Configure the VM for Low Latency**
+1. **Enable MSI (Message Signaled Interrupts)** for the GPU:  
+   - Use [MSI Utility](https://forums.guru3d.com/threads/windows-line-based-vs-message-signaled-based-interrupts.378044/) inside the VM.
+   - Set GPU and audio controller to **MSI mode**.
+2. **Optimize QEMU args** (add to VM XML):
+   ```xml
+   <cpu mode='host-passthrough' check='none'/>
+   <features>
+     <hyperv>
+       <vendor_id state='on' value='1234567890ab'/>
+     </hyperv>
+   </features>
+   ```
+
+---
+
+### **Step 5: Start Looking Glass**
+1. **On the Host (Arch Linux)**:
+   ```bash
+   looking-glass-client
+   ```
+   *(Press `F11` to toggle fullscreen.)*
+2. **Troubleshooting**:
+   - If the screen is black, ensure the Windows service is running.
+   - Use `-f` for fullscreen, `-p` to disable mouse capture.
+
+---
+
+### **Performance Tips**
+- **Use a RAM disk** (faster than `/dev/shm`):
+  ```bash
+  sudo mount -t tmpfs -o size=64M tmpfs /dev/shm/looking-glass
+  ```
+- **Enable Spice for clipboard sharing** (optional):
+  ```xml
+  <graphics type='spice'>
+    <listen type='none'/>
+  </graphics>
+  ```
+
+---
+
+### **Final Notes**
+- **Latency**: Near-native if configured correctly (~1-2ms delay).
+- **Alternatives**: Use a second monitor with GPU output if Looking Glass is laggy.
+- **Audio**: Pass through HDMI audio or use PulseAudio over network.
+
+---
+
+You’re now **seconds away** from a seamless Windows VM with GPU acceleration! Let me know if you hit any snags—I’m happy to debug. 😊  
+
+**Pro Tip**: For gaming, disable the Windows cursor in Looking Glass (`-m` flag) to avoid mouse lag! 🚀   
+
+
 ### **Final Result:**  
 ✅ **GPU Passthrough** (RTX 3070 Ti fully utilized).  
 ✅ **Nested Virtualization** (for WSL2/Hyper-V inside VM).  
 ✅ **Undetectable VM** (games/DRM work).  
+
