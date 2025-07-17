@@ -44,6 +44,68 @@ done
 ```
 Ensure your **GPU and its audio controller** are in **separate groups**. If not, you may need the **ACS override patch**.
 
+## ACS Override Patch
+
+### **Why This Happens**  
+Some motherboards **don’t isolate PCIe devices properly** due to cost-cutting or firmware limitations. This is common on **consumer-grade boards** (vs. server/workstation ones).  
+
+### **Solutions**  
+Here’s how to fix it:  
+
+---
+
+### **Option 1: ACS Override Patch (Most Effective)**  
+**What it does**: Forces PCIe device isolation (even if the motherboard doesn’t support it natively).  
+**⚠️ Warning**: This *can* reduce security slightly (potential DMA attacks), but for a home setup, it’s generally safe.  
+
+#### **Steps:**  
+1. **Install a kernel with ACS patch** (or patch it yourself):  
+   - Pre-patched kernels (Arch):  
+     ```bash
+     yay -S linux-vfio
+     ```
+   - Or manually patch (advanced users).  
+
+2. **Enable ACS override in kernel parameters**:  
+   Edit `/etc/default/grub` again and add:  
+   ```bash
+   GRUB_CMDLINE_LINUX="... pcie_acs_override=downstream,multifunction ..."
+   ```
+   - `downstream`: Isolates devices below the root port.  
+   - `multifunction`: Splits multi-function devices (like GPU + audio).  
+
+3. **Update GRUB & reboot**:  
+   ```bash
+   sudo grub-mkconfig -o /boot/grub/grub.cfg
+   sudo reboot
+   ```
+
+4. **Verify new IOMMU groups**:  
+   Run the IOMMU group script again:  
+   ```bash
+   #!/bin/bash
+   for d in /sys/kernel/iommu_groups/*/devices/*; do
+       n=${d#*/iommu_groups/*}; n=${n%%/*}
+       printf 'IOMMU Group %s ' "$n"
+       lspci -nns "${d##*/}"
+   done
+   ```
+   - Your GPU and audio should now be in **separate groups**.  
+
+---
+
+### **Option 2: Use a Different PCIe Slot**  
+- Some motherboards **isolate slots better** (e.g., the first x16 slot shares lanes with the CPU, while others go through the chipset).  
+- Try moving the GPU to another slot and check IOMMU groups again.  
+
+---
+
+### **Option 3: Pass the Entire Group (Last Resort)**  
+If ACS patch doesn’t work and you can’t change slots:  
+- Pass the **entire IOMMU group** to the VM (including unwanted devices).  
+- Then **disable/unbind the unwanted devices** inside the VM.  
+- Not ideal, but works in some cases.  
+
 ---
 
 ## **Step 2: Configure vfio-pci Early Binding**
