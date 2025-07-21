@@ -56,7 +56,7 @@ Here’s how to fix it:
 
 ### **Option 1: ACS Override Patch (Most Effective)**  
 **What it does**: Forces PCIe device isolation (even if the motherboard doesn’t support it natively).  
-**⚠️ Warning**: This *can* reduce security slightly (potential DMA attacks), but for a home setup, it’s generally safe.  
+**⚠️ Warning**: This *can* reduce security slightly (potential DMA attacks), but for a home setup, it’s generally safe. (However, Vanguard will detect this...) 
 
 #### **Steps:**  
 1. **Install a kernel with ACS patch** (or patch it yourself):  
@@ -101,7 +101,7 @@ Here’s how to fix it:
 ---
 
 ### **Option 3: Pass the Entire Group (Last Resort)**  
-If ACS patch doesn’t work and you can’t change slots:  
+If ACS patch doesn’t work and you can’t change slots and just absolutely want to play Valorant:  
 - Pass the **entire IOMMU group** to the VM (including unwanted devices).  
 - Then **disable/unbind the unwanted devices** inside the VM.  
 - Not ideal, but works in some cases.  
@@ -110,9 +110,12 @@ If ACS patch doesn’t work and you can’t change slots:
 
 ## **Step 2: Configure vfio-pci Early Binding**
 ### **2.1 Identify GPU & Audio Controller IDs**
+
+Change "NVIDIA" to "AMD" if you want to pass an AMD GPU to the VM 
+
 ```bash
-lspci -nn | grep NVIDIA
-```
+lspci -nn | grep NVIDIA 
+``` 
 Example output:  
 ```
 01:00.0 VGA compatible controller [0300]: NVIDIA Corporation GA104 [GeForce RTX 3070 Ti] [10de:2487]  
@@ -130,7 +133,7 @@ sudo mkinitcpio -P
 ```
 
 ### **2.3 Blacklist NVIDIA Drivers (Optional)**
-If the host shouldn’t use the GPU:  
+If the host shouldn’t use the GPU:  (ONLY do this if you know what you're doing. If you blacklist the wrong drivers or have 2 NVIDIA GPUs, this may soft-brick your linux)
 ```bash
 echo "blacklist nouveau" | sudo tee /etc/modprobe.d/blacklist-nvidia.conf
 echo "blacklist nvidia" | sudo tee -a /etc/modprobe.d/blacklist-nvidia.conf
@@ -183,16 +186,22 @@ sudo systemctl restart libvirtd
 - **CPU**: **"Copy host CPU"** + enable **"topology"** (match cores).  
 - **Enable Nested Virtualization** (for WSL2/Hyper-V inside VM):  
   ```bash
-  sudo modprobe -r kvm_intel  # If Intel
+  sudo modprobe -r kvm_intel  # If you have an Intel-CPU
   sudo modprobe kvm_intel nested=1
   echo "options kvm_intel nested=1" | sudo tee /etc/modprobe.d/kvm.conf
+  ```
+
+  ```bash
+  sudo modprobe -r kvm_amd # If you have an AMD-CPU
+  sudo modprobe kvm_amd nested=1
+  echo "options kvm_amd nested=1" | sudo tee /etc/modprobe.d/kvm.conf
   ```
 
 ### **4.3 Add GPU Passthrough**
 1. **Add Hardware** → **PCI Host Device** → Select **GPU & Audio Controller**.  
 2. **Enable "All features"** for hypervisor hiding.  
 
-### **4.4 Hide the Hypervisor (Critical for NVIDIA)**
+### **4.4 Hide the Hypervisor (Critical for NVIDIA, else you may face the infamous "Error 43")**
 Edit the VM’s XML (`virsh edit vmname`):  
 ```xml
 <features>
@@ -237,8 +246,6 @@ sudo virsh autostart vmname
 ---
 
 ## Looking-Glass
-Fantastic progress! 🎉 Since your GPU is now correctly bound to `vfio-pci`, you're ready for **Looking Glass**—and it's **not hard at all** to set up! Here's a streamlined guide:
-
 ---
 
 ### **Looking Glass Setup Guide (Arch Linux + Windows VM)**
@@ -325,6 +332,7 @@ yay -S looking-glass
   </graphics>
   ```
 
+**Pro Tip: Disable Pointer Accceleration on your Windows Guest to avoid Mouse-Issues with Looking Glass
 ---
 
 ### **Final Notes**
@@ -333,14 +341,3 @@ yay -S looking-glass
 - **Audio**: Pass through HDMI audio or use PulseAudio over network.
 
 ---
-
-You’re now **seconds away** from a seamless Windows VM with GPU acceleration! Let me know if you hit any snags—I’m happy to debug. 😊  
-
-**Pro Tip**: For gaming, disable the Windows cursor in Looking Glass (`-m` flag) to avoid mouse lag! 🚀   
-
-
-### **Final Result:**  
-✅ **GPU Passthrough** (RTX 3070 Ti fully utilized).  
-✅ **Nested Virtualization** (for WSL2/Hyper-V inside VM).  
-✅ **Undetectable VM** (games/DRM work).  
-
