@@ -5,7 +5,7 @@
 - **Secondary GPU** (RTX 3070 Ti) for passthrough.  
 - **CPU** with **VT-d/AMD-Vi** (Intel) or **AMD-Vi/SVM** (AMD).  
 - **Motherboard** with **IOMMU** enabled in BIOS.  
-- **Two monitors** (or a way to switch inputs).  
+- **Lots of Patience**  
 
 ✅ **Software:**  
 - **Arch Linux** (fully updated).  
