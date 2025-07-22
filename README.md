@@ -16,6 +16,18 @@
 
 ## **Step 1: Enable IOMMU & Verify GPU Isolation**
 ### **1.1 Enable IOMMU in Kernel Parameters**
+
+To find the PCI-IDs:
+```bash
+sudo lspci -nn | grep NVIDIA # Or AMD, depending on what kind of GPU you want to passthrough
+```
+
+Example output:  
+```
+01:00.0 VGA compatible controller [0300]: NVIDIA Corporation GA104 [GeForce RTX 3070 Ti] [10de:2487]  
+01:00.1 Audio device [0403]: NVIDIA Corporation GA104 High Definition Audio Controller [10de:228b]  
+```
+
 Edit `/etc/default/grub` and modify the `GRUB_CMDLINE_LINUX` line:  
 ```bash
 GRUB_CMDLINE_LINUX="... intel_iommu=on iommu=pt vfio-pci.ids=10de:2487,10de:228b ..."
